@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+<head>
+
+    <meta charset="UTF-8">
+    <title>Lisk Votes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+    <link href='https://fonts.googleapis.com/css?family=Orbitron:400,500,700,900' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="http://typecast.com/images/uploads/modernscale.css" type='text/css'>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"</script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+
+    <style>
+
+      h1 {
+        text-align: center;
+        font-size: 500%;
+        font-family: "Orbitron", sans-serif;
+        font-weight: 500;
+      }
+
+      #uInput {
+        border: 1px solid black;
+        background-color: #339999;
+        margin: 5% 30% 10% 30%;
+        padding: 2%;
+      }
+
+      h2 {
+        text-align: center;
+        font-size: 150%;
+        font-family: "Orbitron", sans-serif;
+        font-weight: 500;
+      }
+
+      #input {
+        width: 100%;
+      }
+
+      .btn {
+        font-family: "Orbitron", sans-serif;
+        font-size: 200%;
+      }
+
+      #amounts {
+        margin: -5% 0% 20% 0%;
+      }
+
+      table, th, td {
+        border: 2px solid black;
+
+      }
+
+      table {
+        width: 50%;
+        margin: -15% 0% 0% 25%;
+      }
+
+      th {
+        background-color: #787878;
+        font-size: 200%;
+        font-family: "Orbitron", sans-serif;
+        font-weight: 900;
+        text-align: center;
+        padding: 5%
+      }
+
+      td {
+        font-size: 150%;
+        text-align: center;
+        padding: 3%;
+      }
+
+    </style>
+
+</head>
+
+<body>
+<div class="container-fluid">
+  <div id ="header">
+    <h1>Lisk Votes</h1>
+  </div>
+
+  <div id="uInput">
+    <h2>Please place delegate address in box and hit RETRIEVE.</h2>
+    <input type="text" id="input" maxlength="21"><br><br>
+    <button type="submit" class="btn btn-block btn-primary" id="retrieve">RETRIEVE</button>
+    <button type="reset" class="btn btn-block btn-danger" id="myReset">CLEAR</button>
+    <h2>Please hit CLEAR to get new a list for another delegate.</h2>
+  </div>
+
+<div id="amounts"></div>
+
+  <table>
+    <tr>
+      <th>USERNAME</th>
+      <th>BALANCES</th>
+    </tr>
+  </table>
+</div>
+
+<script>
+      var input = "";
+      $(document).ready(function() {
+        $("#retrieve").click(function() {
+          input = $("#input").val();
+
+          setTimeout(function() {
+            votes();
+          }, 1000);
+        });
+        $("#myReset").click(function() {
+          $("td").remove();
+          $("p").remove();
+          peerList = {};
+        });
+
+      });
+
+var peerList = {};
+
+      function votes() {
+        var count = 1;
+        $.get("https://login.lisk.io/api/accounts/getPublicKey?address=" + input, function(data) {
+          var pubKey = data.publicKey;
+
+          $.get("https://login.lisk.io/api/delegates/voters?publicKey=" + pubKey, function(acct) {
+            acct.accounts.forEach(function(identity) {
+              var address = identity.address;
+
+              $.get("https://login.lisk.io/api/accounts?address=" + address, function(name) {
+                var peer = name.account.username;
+                var balance = name.account.balance;
+
+                if (peer === "" && !(peer in peerList)) {
+                  peer = "no_name_delegate" + " " + String(count);
+                  count = count+1;
+                  peerList[peer] = balance;
+                } else if (peer === "" && count > 1) {
+                    peer = "no_name_delegate" + " " + String(count);
+                    peerList[peer] = balance;
+                  } else {
+                      peerList[peer] = balance;
+                    }
+              });
+            });
+          });
+        });
+        setTimeout(function() {
+          displayNames();
+        }, 15000);
+
+      }
+
+      function displayNames() {
+
+        var peers = Object.keys(peerList).sort(function(a, b) {
+          var first = a.toLowerCase();
+          var last = b.toLowerCase();
+          return first > last ? 1 : first < last ? -1 : 0;
+        });
+
+        for(i = 0; i < peers.length; i++) {
+          var info = $("<tr></tr>");
+          var username = $("<td></td>").css("padding", "3%").text(peers[i]);
+          var balance = $("<td></td>").css("padding", "3%").text(peerList[peers[i]]);
+          info.append(username);
+          info.append(balance);
+
+          $("table").append(info);
+        }
+
+        var amount = $("<p></p>").css({"font-family": "Orbitron", "font-size": "300%", "font-weight": "500", "text-align": "center"}).text("This delegate has " + peers.length + " " +"votes!");
+        $("#amounts").append(amount);
+
+        $("tr:even").css("background-color", "#D8D8D8");
+      }
+
+</script>
+</body>
+</html>
